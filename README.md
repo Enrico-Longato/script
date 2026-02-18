@@ -6,6 +6,8 @@ Data cleaning and preparation scripts for regional company.
 
 - **01_anagrafica.ipynb** - Interactive Jupyter notebook for data processing - company registry data (IMPRESE.xlsx)
 - **01_anagrafica.py** - Python script version of the notebook - company registry data (IMPRESE.xlsx)
+- **01_excel_to_dcat.py** - Pyton script to chategorize raw data "imprese_fvg_mm_yyyy.xlsx" in DCAT format 
+- **01_output_dcat.py** - Python script to produce final DCAT output in CSV format
 
 ## Description
 

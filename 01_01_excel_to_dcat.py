@@ -1,4 +1,3 @@
-print("VERSIONE NUOVA IN ESECUZIONE")
 
 """
 DCAT Metadata Generator for Excel Files
@@ -146,7 +145,7 @@ def main():
         # Look for Excel files in data subdirectory
         BASE_DIR = Path(__file__).resolve().parent      # FAIR/script
         PROJECT_ROOT = BASE_DIR.parent                  # FAIR
-        data_path = PROJECT_ROOT / "anagrafica" / "data"
+        data_path = PROJECT_ROOT / "data" / "anagrafica"
 
            
         if data_path.exists():

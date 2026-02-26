@@ -25,11 +25,13 @@ import re
 pd.options.display.max_columns = None
 
 # Set up paths and find input file
-
-BASE_DIR = Path(__file__).resolve().parent
-data_path = BASE_DIR.parent / "anagrafica" / "data"
-listafile = [f for f in data_path.iterdir() if "imprese_fvg_" in f.name]
-assert listafile, f"Error: can't find any file in {data_path}"
+current_path = Path(os.getcwd())
+data_subdir = "data/anagrafica"
+data_path = current_path / data_subdir
+data_dir = str(data_path)
+listafile = os.listdir(data_path)
+listafile = list(filter(lambda x: 'imprese_fvg_' in x, listafile))  
+assert len(listafile) >= 1, f"Error: can't find any file in {data_dir}"
 
 # Auto-detect file_da_elaborare based on current month/year
 import re
@@ -92,7 +94,8 @@ df_anagrafica = xl.parse(   'FRIULI Anagrafica',
                             keep_default_na=False)
 
 # create a dictionary with the original and corrected column names
-cols_df = pd.read_excel('cols_dict.xlsx', sheet_name='anagrafica') 
+cols_path = current_path / "script" / "cols_dict.xlsx"
+cols_df = pd.read_excel(cols_path, sheet_name='anagrafica') 
 l1 = cols_df['nomi_colonne_originali']
 l2 = cols_df['nomi_colonne_corretti']
 cols_dic = dict(zip(l1,l2))
@@ -305,7 +308,7 @@ df_codici = xl.parse('FRIULI codice attività',
 # Create a dictionary mapping original column names to corrected ones,
 # then rename the dataframe columns accordingly
 
-cols_df = pd.read_excel('cols_dict.xlsx', sheet_name='codici') 
+cols_df = pd.read_excel(cols_path, sheet_name='codici') 
 l1 = cols_df['nomi_colonne_originali']
 print(l1)
 l2 = cols_df['nomi_colonne_corretti']
@@ -360,7 +363,7 @@ df_anagrafica_repo.drop(columns=['tipo_sedeul_1', 'tipo_sedeul_2', 'tipo_sedeul_
 # - sort columns according to the repository layout
 # - export the selected fields to a pipe-delimited CSV file
 file_risultati = data_dir + '\\' + 'imprese_anagrafica.csv'
-cols_df = pd.read_excel('cols_dict.xlsx', sheet_name='anagrafica',
+cols_df = pd.read_excel(cols_path, sheet_name='anagrafica',
             usecols = ['nomi_colonne_export','ordine_repo']).dropna() 
 cols_df.sort_values('ordine_repo', inplace = True)
 cols_to_use = list(cols_df['nomi_colonne_export'])
@@ -374,7 +377,7 @@ df_anagrafica_repo[cols_to_use].to_csv(  file_risultati,
 # - sort columns according to the repository layout
 # - export the selected fields to a pipe-delimited CSV file
 file_risultati = data_dir + '\\' + 'imprese_codici.csv'
-cols_df = pd.read_excel('cols_dict.xlsx', sheet_name='codici',
+cols_df = pd.read_excel(cols_path, sheet_name='codici',
             usecols = ['nomi_colonne_corretti','ordine_repo']).dropna() 
 cols_df.sort_values('ordine_repo', inplace = True)
 cols_to_use = list(cols_df['nomi_colonne_corretti'])
@@ -392,7 +395,7 @@ df_codici[cols_to_use].to_csv(      file_risultati,
 # - sort columns according to the Innovation Intelligence layout
 # - export the selected fields to a pipe-delimited CSV file
 file_risultati = data_dir + '\\' + 'iifvg_anagrafica.csv'
-cols_df = pd.read_excel('cols_dict.xlsx', sheet_name='anagrafica',
+cols_df = pd.read_excel(cols_path, sheet_name='anagrafica',
             usecols = ['nomi_colonne_corretti','ordine_iifvg']).dropna() 
 cols_df.sort_values('ordine_iifvg', inplace = True)
 cols_to_use = list(cols_df['nomi_colonne_corretti'])
@@ -406,7 +409,7 @@ df_anagrafica[cols_to_use].to_csv(  file_risultati,
 # - sort columns according to the Innovation Intelligence layout
 # - export the selected fields to a pipe-delimited CSV file
 file_risultati = data_dir + '\\' + 'iifvg_codici.csv'
-cols_df = pd.read_excel('cols_dict.xlsx', sheet_name='codici',
+cols_df = pd.read_excel(cols_path, sheet_name='codici',
             usecols = ['nomi_colonne_corretti','ordine_iifvg']).dropna() 
 cols_df.sort_values('ordine_iifvg', inplace = True)
 cols_to_use = list(cols_df['nomi_colonne_corretti'])
@@ -430,7 +433,7 @@ df_anagrafica = df_anagrafica[~unità_locali_extraFVG_filter]
 # Save the ANAGRAFICA file in the "Innovation Intelligence" version
 # after removing local units outside the FVG region
 file_risultati = data_dir + '\\' + 'iifvg_anagrafica_filtrato.csv'
-cols_df = pd.read_excel('cols_dict.xlsx', sheet_name='anagrafica',
+cols_df = pd.read_excel(cols_path, sheet_name='anagrafica',
             usecols = ['nomi_colonne_corretti','ordine_iifvg']).dropna() 
 cols_df.sort_values('ordine_iifvg', inplace = True)
 cols_to_use = list(cols_df['nomi_colonne_corretti'])
@@ -450,7 +453,7 @@ df_codici = df_codici[~unità_locali_extraFVG_filter]
 # Save the CODICI file in the "Innovation Intelligence" version
 # after removing local units outside the FVG region
 file_risultati = data_dir + '\\' + 'iifvg_codici_filtrato.csv'
-cols_df = pd.read_excel('cols_dict.xlsx', sheet_name='codici',
+cols_df = pd.read_excel(cols_path, sheet_name='codici',
             usecols = ['nomi_colonne_corretti','ordine_iifvg']).dropna() 
 cols_df.sort_values('ordine_iifvg', inplace = True)
 cols_to_use = list(cols_df['nomi_colonne_corretti'])
@@ -459,40 +462,3 @@ df_codici[cols_to_use].to_csv(      file_risultati,
                                     encoding='utf-8-sig', 
                                     index=False)
 
-# ============================================================================
-# CSV files for Innovation Intelligence (ONLY FVG local units and ONLY non-capital companies) 
-# For integration into the I2 platform
-# ============================================================================
-
-# Filter out capital companies from the ANAGRAFICA dataset
-tipo_società = ["SOCIETA' DI CAPITALE"]
-anagrafica_soc_capitale = df_anagrafica["tipo_impresa"].isin(tipo_società)
-df_anagrafica = df_anagrafica[~anagrafica_soc_capitale]
-
-# Save the ANAGRAFICA file in the "Innovation Intelligence" version
-# for platform integration after filtering out capital companies
-file_risultati = data_dir + '\\' + 'iifvg_anagrafica_filtrato_noncap.csv'
-cols_df = pd.read_excel('cols_dict.xlsx', sheet_name='anagrafica',
-            usecols = ['nomi_colonne_corretti','ordine_iifvg']).dropna() 
-cols_df.sort_values('ordine_iifvg', inplace = True)
-cols_to_use = list(cols_df['nomi_colonne_corretti'])
-df_anagrafica[cols_to_use].to_csv(  file_risultati, 
-                                    sep ='|',   
-                                    encoding='utf-8-sig', 
-                                    index=False)
-
-# Filter the CODICI dataset to keep only CF values present in the final ANAGRAFICA version
-filtro_df_anagrafica = df_anagrafica[['cf']].copy()
-df_codici = df_codici[df_codici['cf'].isin(filtro_df_anagrafica['cf'].values)]
-
-# Save the CODICI file in the "Innovation Intelligence" version
-# for platform integration after applying the final CF-based filter
-file_risultati = data_dir + '\\' + 'iifvg_codici_filtrato_noncap.csv'
-cols_df = pd.read_excel('cols_dict.xlsx', sheet_name='codici',
-            usecols = ['nomi_colonne_corretti','ordine_iifvg']).dropna() 
-cols_df.sort_values('ordine_iifvg', inplace = True)
-cols_to_use = list(cols_df['nomi_colonne_corretti'])
-df_codici[cols_to_use].to_csv(      file_risultati, 
-                                    sep ='|',   
-                                    encoding='utf-8-sig', 
-                                    index=False)

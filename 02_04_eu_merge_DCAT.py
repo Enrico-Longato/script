@@ -1,14 +1,16 @@
 """
-DCAT Metadata Generator for output CSV files
+DCAT Metadata Generator for merged EU Projects CSV files
 
-Scans the data output directory for CSV files produced by the pipeline
-and generates DCAT-like JSON metadata describing structure and provenance
-for each file. Also produces an aggregated catalog JSON.
+This script scans the `data/eu_projects/merge` folder for CSV files produced
+by the merging pipeline (`02_eu_projects_merging.py`) and generates
+DCAT-like JSON metadata for each file. It also outputs an aggregated
+catalog JSON describing all merged datasets.
 
 Usage:
-    python outputs_to_dcat.py [data_dir] [--catalog catalog.json]
+    python 02_eu_merge_DCAT.py [merge_dir] [--catalog catalog.json]
 
-Default `data_dir` is the `anagrafica/data` folder relative to current working dir.
+Default `merge_dir` is the `data/eu_projects/merge` folder relative to the
+repository root.
 """
 
 import json
@@ -31,7 +33,6 @@ def get_file_metadata(path: Path) -> dict:
 
 
 def get_csv_structure(path: Path) -> dict:
-    # read only header to get columns and dtypes quickly
     try:
         df_head = pd.read_csv(path, sep='|', nrows=0, encoding='utf-8-sig')
     except Exception:
@@ -39,7 +40,6 @@ def get_csv_structure(path: Path) -> dict:
 
     columns = list(df_head.columns)
 
-    # attempt to infer dtypes on a small sample
     try:
         df_sample = pd.read_csv(path, sep='|', nrows=500, encoding='utf-8-sig')
     except Exception:
@@ -47,7 +47,6 @@ def get_csv_structure(path: Path) -> dict:
 
     dtypes = {col: str(df_sample[col].dtype) for col in df_sample.columns}
 
-    # fast row count (safe fallback if very large)
     try:
         with path.open('r', encoding='utf-8', errors='ignore') as f:
             row_count = sum(1 for _ in f) - 1
@@ -67,12 +66,6 @@ def get_csv_structure(path: Path) -> dict:
     }
 
 
-def detect_source_excels(data_dir: Path) -> list:
-    # look for any input excel matching the naming pattern used by the pipeline
-    excels = list(data_dir.glob('imprese_fvg_*.xlsx'))
-    return [str(p.name) for p in excels]
-
-
 def generate_dcat_for_csv(path: Path, provenance: dict = None) -> dict:
     file_meta = get_file_metadata(path)
     structure = get_csv_structure(path)
@@ -85,7 +78,7 @@ def generate_dcat_for_csv(path: Path, provenance: dict = None) -> dict:
         },
         "@type": "dcat:Dataset",
         "dcterms:title": path.stem,
-        "dcterms:description": f"Dataset exported by the anagrafica pipeline: {path.name}",
+        "dcterms:description": f"Merged dataset produced by 02_eu_projects_merging.py: {path.name}",
         "dcterms:issued": file_meta['created'],
         "dcterms:modified": file_meta['modified'],
         "dcat:distribution": {
@@ -102,13 +95,11 @@ def generate_dcat_for_csv(path: Path, provenance: dict = None) -> dict:
 
 
 def main():
-    # default data directory
-    BASE_DIR = Path(__file__).resolve().parent      # FAIR/script
-    PROJECT_ROOT = BASE_DIR.parent                  # FAIR
-    data_path = PROJECT_ROOT / "anagrafica" / "data"
+    BASE_DIR = Path(__file__).resolve().parent
+    PROJECT_ROOT = BASE_DIR.parent
+    default_merge = PROJECT_ROOT / "data" / "eu_projects" / "merge"
 
-
-    data_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else data_path
+    merge_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else default_merge
 
     catalog_out = None
     if '--catalog' in sys.argv:
@@ -116,26 +107,22 @@ def main():
         if idx + 1 < len(sys.argv):
             catalog_out = Path(sys.argv[idx + 1])
 
-    if not data_dir.exists():
-        print(f"Error: data directory not found: {data_dir}")
+    if not merge_dir.exists():
+        print(f"Error: merge directory not found: {merge_dir}")
         sys.exit(1)
 
-    # detect source excel(s) for provenance
-    source_excels = detect_source_excels(data_dir)
-
     provenance_common = {
-        "generated_by": "anagrafica/script/01_anagrafica.py",
+        "generated_by": "anagrafica/script/02_eu_projects_merging.py",
         "generated_on": datetime.now().isoformat(),
-        "source_excels": source_excels,
-        "notes": "Derived outputs from the anagrafica pipeline (filtering, cleaning and export)."
+        "notes": "Datasets produced by concatenating H2020 and Horizon Europe files."
     }
 
-    csv_files = list(data_dir.glob('*.csv'))
-
+    csv_files = list(merge_dir.glob('*.csv'))
     if not csv_files:
-        print(f"No CSV files found in {data_dir}")
+        print(f"No CSV files found in {merge_dir}")
         sys.exit(0)
 
+    # optionally build an aggregated catalog if requested
     catalog = {
         "@context": {
             "dcat": "http://www.w3.org/ns/dcat#",
@@ -144,35 +131,34 @@ def main():
         "@type": "dcat:Catalog",
         "dcterms:issued": datetime.now().isoformat(),
         "datasets": []
-    }
+    } if catalog_out is not None else None
 
     for csv in csv_files:
         prov = provenance_common.copy()
         prov["source_file_detected"] = csv.name
         metadata = generate_dcat_for_csv(csv, provenance=prov)
 
-        # write per-file DCAT JSON besides the CSV (same stem + .dcat.json)
         outpath = csv.with_suffix('.dcat.json')
         with outpath.open('w', encoding='utf-8') as f:
             json.dump(metadata, f, indent=2, ensure_ascii=False)
         print(f"Wrote: {outpath}")
 
-        catalog['datasets'].append({
-            "title": metadata.get('dcterms:title'),
-            "file": metadata['file_info']['filename'],
-            "dcat_json": outpath.name,
-            "row_count": metadata['structure'].get('row_count'),
-            "column_count": metadata['structure'].get('column_count')
-        })
+        if catalog is not None:
+            catalog['datasets'].append({
+                "title": metadata.get('dcterms:title'),
+                "file": metadata['file_info']['filename'],
+                "dcat_json": outpath.name,
+                "row_count": metadata['structure'].get('row_count'),
+                "column_count": metadata['structure'].get('column_count')
+            })
 
-    # write aggregated catalog if requested or to data_dir/DCAT_anagrafica.json
-    if catalog_out is None:
-        catalog_out = data_dir / 'DCAT_anagrafica.json'
-
-    with Path(catalog_out).open('w', encoding='utf-8') as f:
-        json.dump(catalog, f, indent=2, ensure_ascii=False)
-
-    print(f"Aggregated catalog written to: {catalog_out}")
+    # write aggregated catalog only if user explicitly requested it
+    if catalog_out is not None and catalog is not None:
+        with Path(catalog_out).open('w', encoding='utf-8') as f:
+            json.dump(catalog, f, indent=2, ensure_ascii=False)
+        print(f"Aggregated catalog written to: {catalog_out}")
+    else:
+        print("No aggregated catalog created (use --catalog to generate one)")
 
 
 if __name__ == '__main__':

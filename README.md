@@ -4,6 +4,7 @@ Data cleaning and preparation scripts for regional company.
 
 ## Files (Python scripts only)
 
+- `00_main.py` - Launcher that executes all `.py` scripts in this folder in alphabetical order.
 - `01_01_excel_to_dcat.py` - Produce DCAT metadata for raw company Excel files.
 - `01_02_anagrafica.py` - Data cleaning and preparation for company registry (produces CSV outputs).
 - `01_03_outputs_to_dcat.py` - Produce DCAT metadata for processed CSV outputs.
@@ -11,7 +12,7 @@ Data cleaning and preparation scripts for regional company.
 - `02_02_eu_input_DCAT.py` - Produce DCAT metadata for input EU project files.
 - `02_03_eu_projects_merging.py` - Merge and clean EU project datasets into `data/eu_projects/merge`.
 - `02_04_eu_merge_DCAT.py` - Produce per-file DCAT metadata for files in `data/eu_projects/merge` (aggregated catalog optional).
-- `main.py` - Launcher that executes all `.py` scripts in this folder in alphabetical order.
+
 
 ## `cols_dict.xlsx`
 

@@ -48,7 +48,7 @@ pd.options.display.max_columns = None
 # ============================================================================
 
 base_path = Path.cwd()  
-file_anagrafica = base_path / "data" / "anagrafica" / "iifvg_anagrafica_filtrato.csv"
+file_anagrafica = base_path / "data" / "anagrafica" / "i2fvg_anagrafica_filtrato.csv"
 
 print("Using this file:", file_anagrafica)
 

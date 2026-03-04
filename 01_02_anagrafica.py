@@ -18,7 +18,10 @@ import datetime
 import pandas as pd
 import numpy as np
 import re
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 pd.options.display.max_columns = None
+
 
 # Set up paths and find input file
 current_path = Path(os.getcwd())
@@ -127,7 +130,7 @@ for col in cols_to_strip:
     print(col, "ok")
 
 #keep only the active companies
-df_anagrafica= df_anagrafica.loc[df_anagrafica['data_cess_att'].isin([''])]
+df_anagrafica = df_anagrafica.loc[df_anagrafica['data_cess_att'].isin([''])].copy()
 
 # The dates in the original file have some issues, need to correct them with a function that: 
 #   (1) subtract 3000 from the year, 
@@ -212,15 +215,15 @@ df_anagrafica.sort_values(by = 'index', inplace = True)
 # - reset the index to generate a sequential id
 # - assign id_impresa starting from 1
 
-df_cf_univoco = df_anagrafica[['cf', 'denominazione']]
-df_cf_univoco.drop_duplicates(subset='cf', inplace = True)
+df_cf_univoco = df_anagrafica[['cf', 'denominazione']].copy()
+df_cf_univoco = df_cf_univoco.drop_duplicates(subset='cf')
 df_cf_univoco.reset_index(inplace = True)
 df_cf_univoco.reset_index(inplace = True)
 df_cf_univoco['id_impresa'] = df_cf_univoco['level_0'] +1
 df_cf_univoco.columns
 
 # Drop intermediate index columns and reorder the dataframe to show id_impresa and cf
-df_cf_univoco.drop(columns=['level_0', 'index'], inplace = True)
+df_cf_univoco = df_cf_univoco.drop(columns=['level_0', 'index'])
 cols_order = ['id_impresa', 'cf' ]
 df_cf_univoco = df_cf_univoco[cols_order]
 
@@ -265,7 +268,7 @@ cf_no_sede = cf_no_sede['cf'].to_list()
 
 # Remove records whose CF has no headquarters
 
-df_anagrafica = df_anagrafica[~df_anagrafica['cf'].isin(cf_no_sede)]
+df_anagrafica = df_anagrafica[~df_anagrafica['cf'].isin(cf_no_sede)].copy()
 
 # ============================================================================
 # Duplicate management

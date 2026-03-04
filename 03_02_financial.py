@@ -94,8 +94,10 @@ print(f"Upload data from: {file_path}")
 # LOAD FILE
 # =========================
 df = load_file(file_path)
+print(f"Dataset loaded: {df.shape[0]} rows, {df.shape[1]} columns")
 
 EXPECTED_COLUMNS = 21
+print(f"Column check OK: {EXPECTED_COLUMNS} columns detected")
 
 if len(df.columns) != EXPECTED_COLUMNS:
     raise Exception(
@@ -138,7 +140,7 @@ df.columns = [col["name"] for col in SCHEMA]
 # =========================
 valid_rows = []
 error_rows = []
-
+print("Starting row validation...")
 for index, row in df.iterrows():
 
     try:
@@ -169,8 +171,9 @@ for index, row in df.iterrows():
         })
 
 
-print("Righe valide:", len(valid_rows))
-print("Righe con errori:", len(error_rows))
+print("Valid rows:", len(valid_rows))
+print("Rows with errors:", len(error_rows))
+print(f"Validation completed: {len(valid_rows) + len(error_rows)} rows processed")
 
 
 # =========================
@@ -184,10 +187,10 @@ error_output = data_path / f"i2fvg_bilanci_errori_{selected_year}.csv"
 
 if not df_valid.empty:
     df_valid.to_csv(valid_output, index=False, sep="|", decimal=",")
-    print(f"✅ File dati validi salvato: {valid_output}")
+    print(f"✅ File with data saved: {valid_output}")
 
 if not df_errors.empty:
     df_errors.to_csv(error_output, index=False, sep="|", decimal=",")
-    print(f"⚠️ File errori salvato: {error_output}")
+    print(f"⚠️ File errors saved: {error_output}")
 else:
-    print("✅ Nessun errore trovato")
+    print("✅ no errors found")

@@ -86,13 +86,14 @@ assert xl_sheets == ['FRIULI Anagrafica', 'FRIULI codice attività']
 # ============================================================================
 # First sheet: FRIULI Anagrafica
 # ============================================================================
-
+print("Processing sheet: FRIULI Anagrafica")
 df_anagrafica = xl.parse(   'FRIULI Anagrafica', 
                             header = 0, 
                             dtype=str,
                             keep_default_na=False)
 
 # create a dictionary with the original and corrected column names
+print("Renaming columns in the anagrafica sheet")
 cols_path = current_path / "script" / "cols_dict.xlsx"
 cols_df = pd.read_excel(cols_path, sheet_name='anagrafica') 
 l1 = cols_df['nomi_colonne_originali']
@@ -101,6 +102,7 @@ cols_dic = dict(zip(l1,l2))
 df_anagrafica.rename(columns=cols_dic, inplace=True)
 
 #add colunms: source, mm_aaaa, type of location
+print("Adding source, reference month/year and location type columns")
 df_anagrafica['fonte'] = 'I'
 df_anagrafica['mm_aaaa'] = file_da_elaborare
 df_anagrafica['n_sede'] = df_anagrafica['sede_ul'].str[3:] 
@@ -112,9 +114,9 @@ df_anagrafica['n_sede'].tolist()
 # info about the dataset
 dim = df_anagrafica.shape 
 print(f'dimension of the dataset (row,columns) = {dim}\n')
-print(df_anagrafica.info())
 
 #strip special characters
+print("Stripping special characters from text fields")
 #chars_to_strip = '\\n\\t\\r|#'
 pattern = r'[\n\t\r"\'|#\-*]|_x000D_'
 
@@ -130,6 +132,7 @@ for col in cols_to_strip:
     print(col, "ok")
 
 #keep only the active companies
+print("Filtering to keep only active companies (data_cess_att is empty)")
 df_anagrafica = df_anagrafica.loc[df_anagrafica['data_cess_att'].isin([''])].copy()
 
 # The dates in the original file have some issues, need to correct them with a function that: 
@@ -165,7 +168,7 @@ pass
 # Normalize all date columns by applying anno_corretto() and converting them to datetime64.
 
 cols_date = [d for d in df_anagrafica.columns if d.startswith('data')]
-print(cols_date)
+
 for col in cols_date:
     datestring3000 = df_anagrafica[col].tolist()
     datestring = [anno_corretto(item) for item in datestring3000]
@@ -174,12 +177,12 @@ for col in cols_date:
 # ============================================================================
 # id localiz e id impresa
 # ============================================================================
-
+print("Creating id_localiz and id_impresa fields")
 # Create the key_cfl field to link id_localiz with the codes dataset,
 # combining the tax code (cf) and the branch number (n_sede)
 
 df_anagrafica['key_cfl'] = df_anagrafica['cf'] + '_'  + df_anagrafica['n_sede'].apply(str)
-df_anagrafica.info()
+
 
 # Create a temporary "years" column to compute and sort records by age:
 # - calculate the earliest date across all date columns
@@ -210,6 +213,7 @@ df_anagrafica['id_localiz'] = df_anagrafica['index'] + 1
 df_anagrafica.sort_values(by = 'index', inplace = True)
 
 # Create a unique company identifier linked to the tax code (cf):
+print("Creating id_impresa field based on unique tax codes (cf)")
 # - select tax code and company name
 # - drop duplicate tax codes
 # - reset the index to generate a sequential id
@@ -223,6 +227,7 @@ df_cf_univoco['id_impresa'] = df_cf_univoco['level_0'] +1
 df_cf_univoco.columns
 
 # Drop intermediate index columns and reorder the dataframe to show id_impresa and cf
+print("Cleaning up the id_impresa mapping table")   
 df_cf_univoco = df_cf_univoco.drop(columns=['level_0', 'index'])
 cols_order = ['id_impresa', 'cf' ]
 df_cf_univoco = df_cf_univoco[cols_order]
@@ -230,13 +235,14 @@ df_cf_univoco = df_cf_univoco[cols_order]
 df_anagrafica.shape[0] #conta righe
 
 # Join the main anagraphic dataset with the deduplicated company table using the tax code (cf)
+print("Merging id_impresa back into the main anagrafica dataset")   
 
 df_anagrafica = df_anagrafica.merge(df_cf_univoco, on = 'cf', how = 'inner') 
 
 # ============================================================================
 # Checks on local units without reference headquarters – duplicate detection – date validation
 # ============================================================================
-
+print("Performing checks on local units without reference headquarters, duplicate records and date validation")
 # Function to create a binary flag column based on whether the unit is a headquarters or a local unit
 
 def f(row):
@@ -284,6 +290,7 @@ df_dup[df_dup['cf'] == '07381630966']
 
 # Drop duplicated records identified for removal using their row indices
 id_df_dup = df_dup.index.values.tolist()
+print(f"Duplicate rows removed: {len(id_df_dup)}")
 df_anagrafica.drop(id_df_dup, axis=0, inplace=True)
 
 # Recheck for remaining duplicates based on CF and sede_ul after cleanup
@@ -299,6 +306,7 @@ df_dup_test_final_2
 # ============================================================================
 
 # Load the "FRIULI codice attività" sheet into a dataframe, forcing all columns to string
+print("Processing sheet: FRIULI codice attività")   
 df_codici = xl.parse('FRIULI codice attività',  
                     header = 0,
                     dtype=str,
@@ -309,13 +317,12 @@ df_codici = xl.parse('FRIULI codice attività',
 
 cols_df = pd.read_excel(cols_path, sheet_name='codici') 
 l1 = cols_df['nomi_colonne_originali']
-print(l1)
+
 l2 = cols_df['nomi_colonne_corretti']
-print(l2)
 
 cols_dic = dict(zip(l1,l2))
 
-print(cols_dic)
+
 
 df_codici.rename(columns=cols_dic, inplace=True)
 
@@ -345,7 +352,7 @@ df_codici.shape[0]
 # ============================================================================
 # Write output CSV files for multiple targets
 # ============================================================================
-
+print("Exporting cleaned data to CSV files for multiple targets (repository and innovation intelligence)")  
 # File .csv per Repository
 # Since the "tipo_sedeul_n" fields need to be merged, I create a copy of the dataframe so that the merge can be performed on the copy and saved in the "Repository" version.
 
@@ -370,6 +377,7 @@ df_anagrafica_repo[cols_to_use].to_csv(  file_risultati,
                                     sep ='|',   
                                     encoding='utf-8-sig', 
                                     index=False)
+print(f"Saved cleaned anagrafica data to {file_risultati}")
 
 # Save the CODICI file in the "repository" version:
 # - load the export column mapping and order
@@ -384,11 +392,11 @@ df_codici[cols_to_use].to_csv(      file_risultati,
                                     sep ='|',   
                                     encoding='utf-8-sig', 
                                     index=False)
-
+print(f"Saved cleaned codici data to {file_risultati}") 
 # ============================================================================
 # CSV file for Innovation Intelligence (local units including those outside FVG)
 # ============================================================================
-
+print("Exporting cleaned data to CSV files for multiple targets (repository and innovation intelligence)")  
 # Save the ANAGRAFICA file in the "Innovation Intelligence" version:
 # - load the export column mapping and order
 # - sort columns according to the Innovation Intelligence layout
@@ -402,7 +410,7 @@ df_anagrafica[cols_to_use].to_csv(  file_risultati,
                                     sep ='|',   
                                     encoding='utf-8-sig', 
                                     index=False)
-
+print(f"Saved cleaned anagrafica data to {file_risultati}") 
 # Save the CODICI file in the "Innovation Intelligence" version:
 # - load the export column mapping and order
 # - sort columns according to the Innovation Intelligence layout
@@ -416,11 +424,11 @@ df_codici[cols_to_use].to_csv(      file_risultati,
                                     sep ='|',   
                                     encoding='utf-8-sig', 
                                     index=False)
-
+print(f"Saved cleaned codici data to {file_risultati}")     
 # ============================================================================
 # File .csv per Innovation Intelligence (solamente unità locali FVG)
 # ============================================================================
-
+print("Exporting cleaned data to CSV files for multiple targets (repository and innovation intelligence)")  
 # Filter out local units outside the FVG provinces from the ANAGRAFICA dataset:
 # - keep headquarters
 # - remove non-FVG local units
@@ -428,7 +436,7 @@ local_sede = ["SEDE"]
 prov_FVG = ["GO", "PN", "UD", "TS"]
 unità_locali_extraFVG_filter = ~df_anagrafica["sede_ul"].isin(local_sede) & ~df_anagrafica["prov"].isin(prov_FVG)
 df_anagrafica = df_anagrafica[~unità_locali_extraFVG_filter]
-
+print(f"After filtering, anagrafica dataset has {df_anagrafica.shape[0]} rows") 
 # Save the ANAGRAFICA file in the "Innovation Intelligence" version
 # after removing local units outside the FVG region
 file_risultati = data_dir + '\\' + 'i2fvg_anagrafica_filtrato.csv'
@@ -440,7 +448,7 @@ df_anagrafica[cols_to_use].to_csv(  file_risultati,
                                     sep ='|',   
                                     encoding='utf-8-sig', 
                                     index=False)
-
+print(f"Saved cleaned anagrafica data to {file_risultati}") 
 # Filter out local units outside the FVG provinces from the CODICI dataset:
 # - keep headquarters (loc_n == "0")
 # - remove non-FVG local units
@@ -448,7 +456,7 @@ local_sede = ["0"]
 prov_FVG = ["GO", "PN", "UD", "TS"]
 unità_locali_extraFVG_filter = ~df_codici["loc_n"].isin(local_sede) & ~df_codici["prov"].isin(prov_FVG)
 df_codici = df_codici[~unità_locali_extraFVG_filter]
-
+print(f"After filtering, codici dataset has {df_codici.shape[0]} rows") 
 # Save the CODICI file in the "Innovation Intelligence" version
 # after removing local units outside the FVG region
 file_risultati = data_dir + '\\' + 'i2fvg_codici_filtrato.csv'
@@ -460,4 +468,4 @@ df_codici[cols_to_use].to_csv(      file_risultati,
                                     sep ='|',   
                                     encoding='utf-8-sig', 
                                     index=False)
-
+print(f"Saved cleaned codici data to {file_risultati}") 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 EU Projects Download and Extract Script
 

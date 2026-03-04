@@ -1,26 +1,33 @@
+#!/usr/bin/env python3
 """
-DCAT Metadata Generator for output CSV files
+DCAT Metadata Generator for financial output CSV files
 
-Scans the data output directory for CSV files produced by the pipeline
-and generates DCAT-like JSON metadata describing structure and provenance
-for each file. Also produces an aggregated catalog JSON.
+Scans the financial data output directory for CSV files produced by the
+financial pipeline (i2fvg_bilanci_YYYY.csv) and generates DCAT-like JSON
+metadata describing structure and provenance for each file.
 
-Usage:
-    python outputs_to_dcat.py [data_dir] [--catalog catalog.json]
+Creates metadata only if it does not already exist.
 
-Default `data_dir` is the `data/anagrafica` folder relative to current working dir.
+Also produces an aggregated catalog JSON.
+
+Default `data_dir` is:
+    data/financial
 """
 
 import json
 import sys
-import os
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
 
 
-def get_file_metadata(path: Path) -> dict:
+# =========================
+# FILE METADATA
+# =========================
+def get_file_metadata(path: Path):
+
     stat = path.stat()
+
     return {
         "filename": path.name,
         "path": str(path),
@@ -30,8 +37,12 @@ def get_file_metadata(path: Path) -> dict:
     }
 
 
-def get_csv_structure(path: Path) -> dict:
-    # read only header to get columns and dtypes quickly
+# =========================
+# CSV STRUCTURE
+# =========================
+def get_csv_structure(path: Path):
+
+    # read header only
     try:
         df_head = pd.read_csv(path, sep='|', nrows=0, encoding='utf-8-sig')
     except Exception:
@@ -39,7 +50,7 @@ def get_csv_structure(path: Path) -> dict:
 
     columns = list(df_head.columns)
 
-    # attempt to infer dtypes on a small sample
+    # infer types on sample
     try:
         df_sample = pd.read_csv(path, sep='|', nrows=500, encoding='utf-8-sig')
     except Exception:
@@ -47,17 +58,14 @@ def get_csv_structure(path: Path) -> dict:
 
     dtypes = {col: str(df_sample[col].dtype) for col in df_sample.columns}
 
-    # fast row count (safe fallback if very large)
+    # fast row count
     try:
         with path.open('r', encoding='utf-8', errors='ignore') as f:
             row_count = sum(1 for _ in f) - 1
             if row_count < 0:
                 row_count = 0
     except Exception:
-        try:
-            row_count = int(pd.read_csv(path, sep='|', usecols=[0]).shape[0])
-        except Exception:
-            row_count = None
+        row_count = None
 
     return {
         "columns": columns,
@@ -67,52 +75,73 @@ def get_csv_structure(path: Path) -> dict:
     }
 
 
-def detect_source_excels(data_dir: Path) -> list:
-    # look for any input excel matching the naming pattern used by the pipeline
-    excels = list(data_dir.glob('imprese_fvg_*.xlsx'))
-    return [str(p.name) for p in excels]
+# =========================
+# DETECT SOURCE FILES
+# =========================
+def detect_source_files(data_dir: Path):
+
+    sources = list(data_dir.glob('infocamere_*.csv')) + \
+              list(data_dir.glob('infocamere_*.xlsx'))
+
+    return [str(p.name) for p in sources]
 
 
-def generate_dcat_for_csv(path: Path, provenance: dict = None) -> dict:
+# =========================
+# DCAT GENERATION
+# =========================
+def generate_dcat_for_csv(path: Path, provenance: dict):
+
     file_meta = get_file_metadata(path)
     structure = get_csv_structure(path)
 
-    base = {
+    metadata = {
+
         "@context": {
             "dcat": "http://www.w3.org/ns/dcat#",
             "dcterms": "http://purl.org/dc/terms/",
             "prov": "http://www.w3.org/ns/prov#"
         },
+
         "@type": "dcat:Dataset",
+
         "dcterms:title": path.stem,
-        "dcterms:description": f"Dataset exported by the anagrafica pipeline: {path.name}",
+
+        "dcterms:description": f"Dataset exported by the financial pipeline: {path.name}",
+
         "dcterms:issued": file_meta['created'],
         "dcterms:modified": file_meta['modified'],
+
         "dcat:distribution": {
             "dcat:accessURL": path.name,
             "dcat:mediaType": "text/csv",
             "bytes": file_meta['size_bytes']
         },
+
         "structure": structure,
-        "provenance": provenance or {},
+        "provenance": provenance,
         "file_info": file_meta,
     }
 
-    return base
+    return metadata
 
 
+# =========================
+# MAIN
+# =========================
 def main():
-    # default data directory
-    BASE_DIR = Path(__file__).resolve().parent      # FAIR/script
-    PROJECT_ROOT = BASE_DIR.parent                  # FAIR
-    data_path = PROJECT_ROOT / "data" / "anagrafica"
 
+    BASE_DIR = Path(__file__).resolve().parent
+    PROJECT_ROOT = BASE_DIR.parent
+    data_path = PROJECT_ROOT / "data" / "financial"
 
     data_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else data_path
 
     catalog_out = None
+
     if '--catalog' in sys.argv:
+
         idx = sys.argv.index('--catalog')
+
         if idx + 1 < len(sys.argv):
             catalog_out = Path(sys.argv[idx + 1])
 
@@ -120,20 +149,19 @@ def main():
         print(f"Error: data directory not found: {data_dir}")
         sys.exit(1)
 
-    # detect source excel(s) for provenance
-    source_excels = detect_source_excels(data_dir)
+    source_files = detect_source_files(data_dir)
 
     provenance_common = {
-        "generated_by": "anagrafica/script/01_anagrafica.py",
+        "generated_by": "financial/script/03_02_financial.py",
         "generated_on": datetime.now().isoformat(),
-        "source_excels": source_excels,
-        "notes": "Derived outputs from the anagrafica pipeline (filtering, cleaning and export)."
+        "source_files": source_files,
+        "notes": "Derived outputs from the financial pipeline (parsing and validation of Infocamere data)."
     }
 
-    csv_files = list(data_dir.glob('*.csv'))
+    csv_files = list(data_dir.glob('i2fvg_bilanci_*.csv'))
 
     if not csv_files:
-        print(f"No CSV files found in {data_dir}")
+        print(f"No financial CSV outputs found in {data_dir}")
         sys.exit(0)
 
     catalog = {
@@ -147,14 +175,22 @@ def main():
     }
 
     for csv in csv_files:
+
+        outpath = csv.with_suffix('.dcat.json')
+
+        # skip if metadata already exists
+        if outpath.exists():
+            print(f"✓ DCAT already exists: {outpath.name}")
+            continue
+
         prov = provenance_common.copy()
         prov["source_file_detected"] = csv.name
-        metadata = generate_dcat_for_csv(csv, provenance=prov)
 
-        # write per-file DCAT JSON besides the CSV (same stem + .dcat.json)
-        outpath = csv.with_suffix('.dcat.json')
+        metadata = generate_dcat_for_csv(csv, prov)
+
         with outpath.open('w', encoding='utf-8') as f:
             json.dump(metadata, f, indent=2, ensure_ascii=False)
+
         print(f"Wrote: {outpath}")
 
         catalog['datasets'].append({
@@ -165,11 +201,10 @@ def main():
             "column_count": metadata['structure'].get('column_count')
         })
 
-    # write aggregated catalog if requested or to data_dir/DCAT_anagrafica.json
     if catalog_out is None:
-        catalog_out = data_dir / 'DCAT_anagrafica.json'
+        catalog_out = data_dir / 'DCAT_financial.json'
 
-    with Path(catalog_out).open('w', encoding='utf-8') as f:
+    with catalog_out.open('w', encoding='utf-8') as f:
         json.dump(catalog, f, indent=2, ensure_ascii=False)
 
     print(f"Aggregated catalog written to: {catalog_out}")

@@ -1,6 +1,7 @@
 # Company Data Processing Scripts
 
 Data cleaning and preparation scripts for regional company.
+Some description are in italian because of the nature of the data.
 
 ## Files (Python scripts only)
 
@@ -12,6 +13,9 @@ Data cleaning and preparation scripts for regional company.
 - `02_02_eu_input_DCAT.py` - Produce DCAT metadata for input EU project files.
 - `02_03_eu_projects_merging.py` - Merge and clean EU project datasets into `data/eu_projects/merge`.
 - `02_04_eu_merge_DCAT.py` - Produce per-file DCAT metadata for files in `data/eu_projects/merge` (aggregated catalog optional).
+- `03_01_financial_input_to_dcat.py` - Produce DCAT metadata for raw company financial files.
+- `03_02_financial.py` - Data cleaning and preparation for company financial information (produces CSV outputs).
+- `03_03_financial_outputs_to_dcat.py` - Produce DCAT metadata for processed financial CSV outputs.
 
 
 ## `cols_dict.xlsx`

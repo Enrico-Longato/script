@@ -1,17 +1,13 @@
+#!/usr/bin/env python3
 """
 Notebook 01: basic data preparation (XLSX >>> cleaning >>> CSV)
 
 Authors: Fabio Morea, Leyla Vesnic, Enrico Longato @ Area Science Park
  
 Description: python scripts to clean and prepare data on regional companies.
-This script imports data from 'IMPRESE.xlsx' and produces clean data in the form of .csv files.
+This script imports data from .xlsx and produces clean data in the form of .csv files.
 
-License: 
-scripts are available under CC-BY-4.0
-data is not included in the package
 
-Code is mantained on GitHub: https://github.com/areasciencepark/I2FVG_Anagrafiche
-Some description are in italian because of the nature of the data.
 """
 
 # Setup
@@ -394,10 +390,10 @@ df_codici[cols_to_use].to_csv(      file_risultati,
 # - load the export column mapping and order
 # - sort columns according to the Innovation Intelligence layout
 # - export the selected fields to a pipe-delimited CSV file
-file_risultati = data_dir + '\\' + 'iifvg_anagrafica.csv'
+file_risultati = data_dir + '\\' + 'i2fvg_anagrafica.csv'
 cols_df = pd.read_excel(cols_path, sheet_name='anagrafica',
-            usecols = ['nomi_colonne_corretti','ordine_iifvg']).dropna() 
-cols_df.sort_values('ordine_iifvg', inplace = True)
+            usecols = ['nomi_colonne_corretti','ordine_i2fvg']).dropna() 
+cols_df.sort_values('ordine_i2fvg', inplace = True)
 cols_to_use = list(cols_df['nomi_colonne_corretti'])
 df_anagrafica[cols_to_use].to_csv(  file_risultati, 
                                     sep ='|',   
@@ -408,10 +404,10 @@ df_anagrafica[cols_to_use].to_csv(  file_risultati,
 # - load the export column mapping and order
 # - sort columns according to the Innovation Intelligence layout
 # - export the selected fields to a pipe-delimited CSV file
-file_risultati = data_dir + '\\' + 'iifvg_codici.csv'
+file_risultati = data_dir + '\\' + 'i2fvg_codici.csv'
 cols_df = pd.read_excel(cols_path, sheet_name='codici',
-            usecols = ['nomi_colonne_corretti','ordine_iifvg']).dropna() 
-cols_df.sort_values('ordine_iifvg', inplace = True)
+            usecols = ['nomi_colonne_corretti','ordine_i2fvg']).dropna() 
+cols_df.sort_values('ordine_i2fvg', inplace = True)
 cols_to_use = list(cols_df['nomi_colonne_corretti'])
 df_codici[cols_to_use].to_csv(      file_risultati, 
                                     sep ='|',   
@@ -432,10 +428,10 @@ df_anagrafica = df_anagrafica[~unità_locali_extraFVG_filter]
 
 # Save the ANAGRAFICA file in the "Innovation Intelligence" version
 # after removing local units outside the FVG region
-file_risultati = data_dir + '\\' + 'iifvg_anagrafica_filtrato.csv'
+file_risultati = data_dir + '\\' + 'i2fvg_anagrafica_filtrato.csv'
 cols_df = pd.read_excel(cols_path, sheet_name='anagrafica',
-            usecols = ['nomi_colonne_corretti','ordine_iifvg']).dropna() 
-cols_df.sort_values('ordine_iifvg', inplace = True)
+            usecols = ['nomi_colonne_corretti','ordine_i2fvg']).dropna() 
+cols_df.sort_values('ordine_i2fvg', inplace = True)
 cols_to_use = list(cols_df['nomi_colonne_corretti'])
 df_anagrafica[cols_to_use].to_csv(  file_risultati, 
                                     sep ='|',   
@@ -452,10 +448,10 @@ df_codici = df_codici[~unità_locali_extraFVG_filter]
 
 # Save the CODICI file in the "Innovation Intelligence" version
 # after removing local units outside the FVG region
-file_risultati = data_dir + '\\' + 'iifvg_codici_filtrato.csv'
+file_risultati = data_dir + '\\' + 'i2fvg_codici_filtrato.csv'
 cols_df = pd.read_excel(cols_path, sheet_name='codici',
-            usecols = ['nomi_colonne_corretti','ordine_iifvg']).dropna() 
-cols_df.sort_values('ordine_iifvg', inplace = True)
+            usecols = ['nomi_colonne_corretti','ordine_i2fvg']).dropna() 
+cols_df.sort_values('ordine_i2fvg', inplace = True)
 cols_to_use = list(cols_df['nomi_colonne_corretti'])
 df_codici[cols_to_use].to_csv(      file_risultati, 
                                     sep ='|',   
